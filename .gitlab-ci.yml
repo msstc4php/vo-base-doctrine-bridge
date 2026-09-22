@@ -1,0 +1,50 @@
+# The core is consumed through a path repository, so its checkout must sit next
+# to this one. The branch is explicit: Composer derives a path package's version
+# from the checked-out branch name, and it has to match the constraint in
+# composer.json. A default-branch clone resolves to a different version and
+# composer install fails before any test runs.
+variables:
+  CORE_REPO: "https://github.com/msstc4php/vo-base.git"
+  CORE_BRANCH: "feat/value-objects-library"
+
+default:
+  image: php:8.4-cli
+  before_script:
+    - git clone --depth 1 --branch "$CORE_BRANCH" "$CORE_REPO" ../vo-base
+
+stages:
+  - check
+  - isolation
+
+full:
+  stage: check
+  script:
+    - composer install --no-interaction --no-progress
+    - make check
+    - make test
+
+orm-without-odm:
+  stage: isolation
+  script:
+    - composer install --no-interaction --no-progress
+    - composer remove --dev doctrine/mongodb-odm --no-interaction --no-progress
+    - php tools/check-autoload-isolation.php "$PWD/src/Orm" 'MSSTC4PHP\ValueObjectDoctrineBridge\Orm\'
+    - php tools/check-autoload-isolation.php "$PWD/src/Shared" 'MSSTC4PHP\ValueObjectDoctrineBridge\Shared\'
+
+odm-without-orm:
+  stage: isolation
+  script:
+    - composer install --no-interaction --no-progress
+    - composer remove --dev doctrine/orm doctrine/dbal --no-interaction --no-progress
+    - php tools/check-autoload-isolation.php "$PWD/src/Odm" 'MSSTC4PHP\ValueObjectDoctrineBridge\Odm\'
+    - php tools/check-autoload-isolation.php "$PWD/src/Shared" 'MSSTC4PHP\ValueObjectDoctrineBridge\Shared\'
+
+# R5 forbids a Symfony dependency, not the word: the relocated TypeRegistrar
+# docblocks legitimately explain how a Symfony consumer would map these types,
+# and the cs-fixer config enables the "@Symfony" rule preset.
+no-symfony:
+  stage: check
+  before_script: []
+  script:
+    - '! grep -n "symfony/" composer.json'
+    - '! grep -rn "^use Symfony" src/'

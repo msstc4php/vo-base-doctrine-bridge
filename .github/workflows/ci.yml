@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  # The core is consumed through a path repository, so its checkout must sit
+  # next to this one. The branch is explicit: Composer derives a path package's
+  # version from the checked-out branch name, and it has to match the constraint
+  # in composer.json. A default-branch clone resolves to a different version and
+  # composer install fails before any test runs.
+  CORE_REPO: https://github.com/msstc4php/vo-base.git
+  CORE_BRANCH: feat/value-objects-library
+
+jobs:
+  full:
+    name: Full toolchain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: vo-base-doctrine-bridge
+      - name: Check out the core next to this repository
+        run: git clone --depth 1 --branch "$CORE_BRANCH" "$CORE_REPO" vo-base
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl, mongodb, mbstring, bcmath
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+        working-directory: vo-base-doctrine-bridge
+      - run: make check
+        working-directory: vo-base-doctrine-bridge
+      - run: make test
+        working-directory: vo-base-doctrine-bridge
+
+  orm-without-odm:
+    name: ORM branch loads without doctrine/mongodb-odm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: vo-base-doctrine-bridge
+      - run: git clone --depth 1 --branch "$CORE_BRANCH" "$CORE_REPO" vo-base
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl, mbstring, bcmath
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+        working-directory: vo-base-doctrine-bridge
+      - run: composer remove --dev doctrine/mongodb-odm --no-interaction --no-progress
+        working-directory: vo-base-doctrine-bridge
+      - name: Load every ORM and Shared class
+        working-directory: vo-base-doctrine-bridge
+        run: |
+          php tools/check-autoload-isolation.php "$PWD/src/Orm" 'MSSTC4PHP\ValueObjectDoctrineBridge\Orm\'
+          php tools/check-autoload-isolation.php "$PWD/src/Shared" 'MSSTC4PHP\ValueObjectDoctrineBridge\Shared\'
+
+  odm-without-orm:
+    name: ODM branch loads without doctrine/orm and doctrine/dbal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: vo-base-doctrine-bridge
+      - run: git clone --depth 1 --branch "$CORE_BRANCH" "$CORE_REPO" vo-base
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: intl, mongodb, mbstring, bcmath
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+        working-directory: vo-base-doctrine-bridge
+      - run: composer remove --dev doctrine/orm doctrine/dbal --no-interaction --no-progress
+        working-directory: vo-base-doctrine-bridge
+      - name: Load every ODM and Shared class
+        working-directory: vo-base-doctrine-bridge
+        run: |
+          php tools/check-autoload-isolation.php "$PWD/src/Odm" 'MSSTC4PHP\ValueObjectDoctrineBridge\Odm\'
+          php tools/check-autoload-isolation.php "$PWD/src/Shared" 'MSSTC4PHP\ValueObjectDoctrineBridge\Shared\'
+
+  no-symfony:
+    name: No Symfony anywhere it would mean a dependency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # R5 forbids a Symfony *dependency*, not the word. The patterns below are
+      # the two shapes a dependency actually takes: a package name in the
+      # manifest or CI, and an imported FQCN in the sources. Prose may still
+      # mention Symfony -- the relocated TypeRegistrar docblocks do, explaining
+      # how a Symfony consumer would map these types instead, and the cs-fixer
+      # config enables the "@Symfony" rule preset, which is a rule set name.
+      - name: Reject a Symfony dependency in sources and manifest
+        run: |
+          status=0
+          if grep -n 'symfony/' composer.json; then
+            echo "::error::A symfony/* package is required in composer.json."
+            status=1
+          fi
+          if grep -rn '^use Symfony' src/; then
+            echo "::error::A Symfony class is imported in src/."
+            status=1
+          fi
+          if [ "$status" -eq 0 ]; then
+            echo "No Symfony dependency in composer.json or src/."
+          fi
+          exit "$status"
