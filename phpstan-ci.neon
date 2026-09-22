@@ -1,0 +1,8 @@
+# PHPStan config for CI. Same checks as the local gate, but tolerates baseline
+# entries that no longer match (e.g. class.notFound patterns for optional deps
+# absent in a given install). Any NEW finding still fails the build.
+includes:
+    - phpstan.dist.neon
+
+parameters:
+    reportUnmatchedIgnoredErrors: false

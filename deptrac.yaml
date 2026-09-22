@@ -1,0 +1,25 @@
+deptrac:
+  paths:
+    - ./src
+  layers:
+    - name: Shared
+      collectors:
+        - type: directory
+          value: src/Shared/.*
+    - name: Orm
+      collectors:
+        - type: directory
+          value: src/Orm/.*
+    - name: Odm
+      collectors:
+        - type: directory
+          value: src/Odm/.*
+  ruleset:
+    # Shared depends on the core only; the core is not declared as a layer and
+    # therefore does not appear in the rules. Orm and Odm never see each other
+    # (R12) -- that absence is the machine form of the branch split.
+    Shared: ~
+    Orm:
+      - Shared
+    Odm:
+      - Shared
