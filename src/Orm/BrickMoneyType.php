@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\ValueObjectDoctrineBridge\Orm;
 
+use Brick\Math\BigDecimal;
+use Brick\Money\Context;
+use Brick\Money\Context\CustomContext;
+use Brick\Money\Context\DefaultContext;
 use Brick\Money\Money;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
 use InvalidArgumentException;
+use MSSTC4PHP\ValueObject\I18n\CurrencyCode;
 use Override;
 
 /**
@@ -62,6 +67,29 @@ final class BrickMoneyType extends Type
 
         [$currency, $amount] = $parts;
 
-        return Money::of($amount, $currency);
+        return Money::of($amount, $currency, $this->contextFor($currency, $amount));
+    }
+
+    /**
+     * Writing hands over the full BigDecimal, so the column may carry a scale
+     * larger than the currency's. Reading with the implicit DefaultContext would
+     * then throw RoundingNecessaryException -- the type would be unable to read
+     * what it just wrote. The scale is therefore taken back from the stored
+     * string.
+     *
+     * DefaultContext is kept whenever the scale matches the currency's ISO minor
+     * units, so ordinary amounts round-trip with their context identity intact
+     * and still satisfy the base money mapping.
+     *
+     * AutoContext is not an option here: it strips trailing zeros, so
+     * "USD 1.2300" would come back at scale 2, and it calls a method deprecated
+     * in brick/math.
+     */
+    private function contextFor(string $currency, string $amount): Context
+    {
+        $scale = BigDecimal::of($amount)->getScale();
+        $isoScale = CurrencyCode::tryFrom($currency)?->isoMinorUnits();
+
+        return $scale === $isoScale ? new DefaultContext() : new CustomContext($scale);
     }
 }
