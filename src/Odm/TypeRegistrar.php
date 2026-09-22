@@ -49,6 +49,12 @@ final class TypeRegistrar
         JsonStringType::NAME => JsonStringType::class,
         DateRangeType::NAME => DateRangeType::class,
         BrickMoneyType::NAME => BrickMoneyType::class,
+        NonEmptyStringType::NAME => NonEmptyStringType::class,
+        PositiveIntType::NAME => PositiveIntType::class,
+        NonNegativeIntType::NAME => NonNegativeIntType::class,
+        PercentageType::NAME => PercentageType::class,
+        BoundedStringType::NAME => BoundedStringType::class,
+        IntRangeType::NAME => IntRangeType::class,
     ];
 
     public static function registerAll(): void
