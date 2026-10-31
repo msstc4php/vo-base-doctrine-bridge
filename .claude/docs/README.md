@@ -11,4 +11,4 @@ user-facing documentation.
 | [known-issues.md](known-issues.md) | Traps that cost time: the `ofMinor` scale bug, the two write/read asymmetries, CLDR vs ISO digits, the Rector/deptrac syntax conflict |
 
 Related: the core's own `.claude/docs/`, and
-`../vo-base-symfony-bridge/.claude/docs/` for the bundle.
+`../../msstc4symfony/vo-base-bridge-symfony/.claude/docs/` for the bundle.

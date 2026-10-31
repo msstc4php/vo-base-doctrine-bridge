@@ -1,6 +1,6 @@
 {
     "name": "msstc4php/vo-base-doctrine-bridge",
-    "description": "Doctrine ORM and MongoDB ODM types and embeddables for msstc4php/value-objects.",
+    "description": "Doctrine ORM and MongoDB ODM types and embeddables for msstc4php/vo-base.",
     "type": "library",
     "license": "MIT",
     "keywords": ["value-object", "doctrine", "dbal", "orm", "mongodb-odm", "bridge", "ddd"],
@@ -17,7 +17,7 @@
     ],
     "require": {
         "php": ">=8.4",
-        "msstc4php/value-objects": "dev-feat/value-objects-library as 1.1.0"
+        "msstc4php/vo-base": "dev-feat/value-objects-library as 1.1.0"
     },
     "require-dev": {
         "brick/math": "^0.12 || ^0.13 || ^0.14",
